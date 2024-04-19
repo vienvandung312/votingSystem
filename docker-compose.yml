@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  kafka:
+    image: bitnami/kafka:latest
+    hostname: kafka-server
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+      - "9094:9094"
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://kafka-server:9092,CONTROLLER://kafka-server:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka-server:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+
+  postgres:
+    image: postgres:latest
+    hostname: postgres
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=voting
+    healthcheck:
+      test: ["CMD","pg_isready","-U","postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: spark-master
+    ports:
+      - "9090:9090"
+      - "7077:7077"
+    command: bin/spark-class org.apache.spark.deploy.master.Master
+
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=1g
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+
+    depends_on:
+     - spark-master
