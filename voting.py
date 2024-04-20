@@ -3,7 +3,6 @@ from datetime import datetime
 from db import SingletonDBConnection
 from confluent_kafka import Consumer, SerializingProducer, KafkaError, KafkaException
 import json
-import time
 
 from main import delivered_report
 
@@ -72,8 +71,7 @@ if __name__ == "__main__":
                         on_delivery=delivered_report
                     )
                     producer.poll(0)
-                except Exception as e:
+                except KafkaException as e:
                     print(e)
-            time.sleep(0.5)
     except Exception as e:
         raise e
