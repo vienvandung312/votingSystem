@@ -43,11 +43,10 @@ def create_kafka_consumer(topic_name):
 def fetch_data_from_kafka(consumer):
     messages = consumer.poll(1)
     data = []
-    st.write(messages)
-    # for message in json.loads(messages.value()):
-    #     for sub_message in message:
-    #         data.append(sub_message.value)r
-    # return data
+    for message in json.loads(messages.value().decode("utf-8").strip):
+        for sub_message in message:
+            data.append(sub_message.value())
+    return data
 
 
 def update_data(conn):
