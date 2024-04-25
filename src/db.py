@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine.url import URL
-from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy import MetaData
 
 class Database:
     def __init__(self, db_uri: str|URL):
@@ -10,11 +10,11 @@ class Database:
     def create_engine(self, db_uri: str|URL):
         self.engine = create_engine(db_uri, pool_size=3, max_overflow=0)
 
-    def create_table(self, table: DeclarativeMeta):
-        table.metadata.create_all(self.engine)
+    def create_table(self, table: MetaData):
+        table.create_all(self.engine)
 
-    def delete_table(self, table: DeclarativeMeta):
-        table.metadata.drop_all(self.engine)
+    def delete_table(self, table: MetaData):
+        table.drop_all(self.engine)
 
     def get_schema(self):
         return self.engine.url.database

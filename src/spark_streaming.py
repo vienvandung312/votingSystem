@@ -1,10 +1,13 @@
 import pyspark
 from pyspark.sql import SparkSession
-from pyspark.sql.types import *
+from pyspark.sql.types import StructType, StructField, StringType, TimestampType, IntegerType
 from pyspark.sql.functions import sum as spark_sum, col, from_json
+import logging
+
 
 if __name__ == "__main__":
-    print(f"You're using PySpark {pyspark.__version__}")
+    logging.info(f"You're using PySpark {pyspark.__version__}")
+    logging.info(f"Starting SparkSession")
     spark = (
         SparkSession
         .builder

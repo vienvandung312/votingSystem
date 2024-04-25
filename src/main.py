@@ -1,9 +1,10 @@
 import json
 import random
 import requests
+from requests.exceptions import ConnectionError
 from typing import Any, Tuple
-from confluent_kafka import SerializingProducer
-from business_logic import Candidate, Voter, Vote
+from confluent_kafka.serializing_producer import SerializingProducer
+from model import Candidate, Voter, Vote
 from db import Database
 from sqlalchemy.ext.declarative import DeclarativeMeta
 
@@ -13,7 +14,11 @@ def create_tables(db: Database) -> None:
     db.create_table(Vote)
 
 def generate_candidates() -> Tuple:
-    response = requests.get(BASE_URL)
+    try:
+        response = requests.get(BASE_URL)
+    except ConnectionError:
+        raise ConnectionError("Check Internet connection")
+    
     if response.status_code == 200:
         user_data = response.json()['results'][0]
         return (
@@ -40,7 +45,11 @@ def generate_candidates() -> Tuple:
 
 
 def generate_voter_data() -> Tuple:
-    response = requests.get(BASE_URL)
+    try:
+        response = requests.get(BASE_URL)
+    except ConnectionError:
+        raise ConnectionError("Check Internet connection")
+    
     if response.status_code == 200:
         user_data = response.json()['results'][0]
         return (
