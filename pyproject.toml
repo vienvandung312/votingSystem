@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "votingsystem"
+version = "0.1.0"
+description = "This project simulating a normal voting system, using Kafka and Pyspark"
+authors = ["Ryan Vien"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pyspark = "^3.5.1"
+confluent-kafka = "^2.3.0"
+requests = "^2.31.0"
+streamlit = "^1.33.0"
+sqlalchemy = "^2.0.29"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

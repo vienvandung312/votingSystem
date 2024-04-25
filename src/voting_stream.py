@@ -1,44 +1,39 @@
 import random
 from datetime import datetime
-from db import SingletonDBConnection
-from confluent_kafka import Consumer, SerializingProducer, KafkaError, KafkaException
+from confluent_kafka.deserializing_consumer import DeserializingConsumer
+from confluent_kafka.serializing_producer import SerializingProducer
+from confluent_kafka.error import KafkaError, KafkaException
 import json
-import time
+from main import delivered_report, insert_to_db
+from model import Candidate, Vote
+from db import Database
 
-from main import delivered_report
 
-conf = {
+CONF = {
     "bootstrap.servers": "localhost:9094"
 }
-consumer = Consumer(conf | {
+
+producer = SerializingProducer(CONF)
+
+consumer = DeserializingConsumer(CONF | {
     "group.id": "voting-group",
     "auto.offset.reset": "earliest",
     "enable.auto.commit": False
 })
+consumer.subscribe(['voter_topic'])
 
-producer = SerializingProducer(conf)
+db = Database("postgresql://postgres:postgres@localhost/voting")
 
 if __name__ == "__main__":
-
-    pg_conn = SingletonDBConnection(host="localhost", dbname="voting", user="postgres", password="postgres").connect()
-    cursor = pg_conn.cursor()
-    candidate_query = cursor.execute(
-        """
-        SELECT row_to_json(t1)
-        FROM
-        (SELECT * FROM candidates) t1;
-        """
-    )
-    candidates = [candidate[0] for candidate in cursor.fetchall()]
+    with db.get_session().begin() as s:
+        candidates = [candidate.to_dict() for candidate in s.query(Candidate).all()]
 
     if len(candidates) < 2:
         raise Exception("Not enough candidates")
 
-    consumer.subscribe(['voter_topic'])
-
     try:
         while True:
-            msg = consumer.poll(timeout=0.1)
+            msg = consumer.poll(0)
             if not msg:
                 continue
             elif msg.error():
@@ -56,14 +51,14 @@ if __name__ == "__main__":
                 }
                 try:
                     print("User {} is voting for {}".format(vote['voter_name'], vote['candidate_name']))
-                    cursor.execute(
-                        """
-                        INSERT INTO votes(voter_id, candidate_id, voting_time)
-                        VALUES(%s,%s,%s)
-                        """,
-                        (vote['voter_id'], vote['candidate_id'], vote['voting_time'])
-                    )
-                    pg_conn.commit()
+                    # TODO: Implement Atomicity for this operation
+                    insert_to_db(db, Vote(
+                                        voter_id=vote['voter_id'], 
+                                        candidate_id=vote['candidate_id'], 
+                                        voting_time=vote['voting_time'], 
+                                        vote=vote['vote']
+                                    )
+                                )
 
                     producer.produce(
                         topic="votes_topic",
@@ -72,8 +67,7 @@ if __name__ == "__main__":
                         on_delivery=delivered_report
                     )
                     producer.poll(0)
-                except Exception as e:
-                    print(e)
-            time.sleep(0.5)
-    except Exception as e:
+                except KafkaException as e:
+                    raise e
+    except KafkaException as e:
         raise e
